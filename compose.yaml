@@ -1,0 +1,39 @@
+name: observability
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.144.0
+    command: ["-storageDataPath=/storage", "-retentionPeriod=90d", "-opentelemetry.usePrometheusNaming"]
+    volumes: ["victoria-metrics-data:/storage"]
+    ports: ["127.0.0.1:8428:8428"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8428/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.129.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes: ["./central/otel/config.yaml:/etc/otelcol/config.yaml:ro"]
+    ports:
+      - "${OTLP_BIND_ADDRESS:-0.0.0.0}:4317:4317"
+      - "${OTLP_BIND_ADDRESS:-0.0.0.0}:4318:4318"
+    depends_on:
+      victoriametrics: {condition: service_healthy}
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana:13.1.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?set in .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./central/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports: ["${GRAFANA_BIND_ADDRESS:-127.0.0.1}:3000:3000"]
+    depends_on:
+      victoriametrics: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  victoria-metrics-data:
+  grafana-data:

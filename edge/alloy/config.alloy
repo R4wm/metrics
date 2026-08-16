@@ -1,0 +1,14 @@
+// On prsmusa.com, set METRICS_REMOTE_WRITE_URL to its loopback tunnel port.
+prometheus.exporter.unix "host" {}
+
+prometheus.scrape "host" {
+  targets = prometheus.exporter.unix.host.targets
+  scrape_interval = "15s"
+  forward_to = [prometheus.remote_write.central.receiver]
+}
+
+prometheus.remote_write "central" {
+  endpoint {
+    url = sys.env("METRICS_REMOTE_WRITE_URL")
+  }
+}
