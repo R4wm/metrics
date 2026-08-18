@@ -1,0 +1,16 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"id": 1, "title": "Metrics targets", "type": "stat", "targets": [{"expr": "sum(up)", "refId": "A"}], "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}},
+    {"id": 2, "title": "Host CPU usage", "type": "timeseries", "targets": [{"expr": "100 - (avg by(host) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A"}], "gridPos": {"h": 8, "w": 9, "x": 6, "y": 0}},
+    {"id": 3, "title": "Lowest free disk (%)", "type": "timeseries", "targets": [{"expr": "100 * min by(host) (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"})", "refId": "A"}], "gridPos": {"h": 8, "w": 9, "x": 15, "y": 0}},
+    {"id": 4, "title": "Container memory", "type": "timeseries", "targets": [{"expr": "sum by(name) (container_memory_working_set_bytes{container!=\"\"})", "refId": "A"}], "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8}},
+    {"id": 5, "title": "Container CPU", "type": "timeseries", "targets": [{"expr": "sum by(name) (rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]))", "refId": "A"}], "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8}}
+  ],
+  "schemaVersion": 41,
+  "tags": ["platform"],
+  "title": "Platform Overview",
+  "uid": "platform-overview",
+  "version": 1
+}

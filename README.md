@@ -1,57 +1,74 @@
-# Observability platform
+# Metrics platform
 
-Docker-managed central metrics platform for the internal laptop.
+Docker-managed observability for services on `10.0.0.68`.
 
-- **VictoriaMetrics** is the durable metrics database.
-- **OpenTelemetry Collector** accepts OTLP metrics from APIs/services.
-- **Grafana** is the dashboards and alerting UI.
-- **Grafana Alloy** is the reusable edge agent for Linux servers.
+## Components
 
-## Network model
+- **VictoriaMetrics** stores Prometheus-compatible metrics for 90 days.
+- **Grafana** provides the private dashboard and alert UI.
+- **Alloy** discovers opted-in Docker containers and scrapes their Prometheus metrics.
+- **node_exporter** and **cAdvisor** provide host and Docker-container health metrics.
+- **OpenTelemetry Collector** accepts OTLP metrics from services connected to the
+  shared `metrics_internal` Docker network.
+- **vmalert** evaluates alert rules and sends them to Alertmanager. The initial
+  receiver intentionally discards notifications until Slack, email, or a webhook
+  is configured.
 
-```text
-home APIs ── OTLP ──> laptop:4318 ──> Collector ──> VictoriaMetrics
-                                                      ^
-prsmusa Alloy ─> 127.0.0.1:18428 ─ reverse SSH ────┘
-```
+## Security model
 
-The laptop initiates the SSH connection. Reverse ports bind to `127.0.0.1` on
-the VPS, so VictoriaMetrics and OTLP are never public. Browser applications
-must send telemetry to their own API/domain, not directly to this laptop.
+- Grafana and VictoriaMetrics bind only to `127.0.0.1` on `10.0.0.68`.
+- VictoriaMetrics, Alertmanager, exporters, and the Collector have no public
+  host ports. Expose Grafana only through the existing reverse-SSH/Nginx route.
+- Alloy and cAdvisor mount the Docker socket/read host files to observe the host.
+  Treat access to this repository and the Docker host as privileged.
 
-## Start the central stack
+## Deploy on 10.0.0.68
 
 ```bash
+git clone ssh://git@github.com/R4wm/metrics.git ~/github/metrics
+cd ~/github/metrics
 cp .env.example .env
-# Change the Grafana password in .env.
-docker compose up -d
-docker compose ps
+# Set GRAFANA_ADMIN_PASSWORD to a strong, unique value.
+./scripts/deploy.sh
 ```
 
-Grafana defaults to laptop-only access on port 3000. OTLP is on internal-LAN
-ports 4317/4318; restrict it to trusted hosts with the laptop firewall.
+The deploy user must be in the `docker` group or run the script with `sudo`.
+After startup, Grafana listens on `127.0.0.1:3000`; VictoriaMetrics listens on
+`127.0.0.1:8428`. Configure the existing reverse SSH tunnel/Nginx proxy to
+forward only Grafana's loopback port. The reusable systemd template is in
+`tunnel/observability-reverse-tunnel.service`; set its destination and remote
+port in `/etc/observability/tunnel.env`.
 
-## Tunnel
+## Add a Docker service
+
+Expose a Prometheus endpoint and opt the service into scraping:
+
+```yaml
+services:
+  example-api:
+    labels:
+      metrics.scrape: "true"
+      metrics.port: "8080"
+      metrics.path: "/metrics"
+      metrics.job: "example_api"
+      metrics.service: "example-api"
+```
+
+Alloy discovers the container every 30 seconds and adds stable `job`, `service`,
+`host`, and Compose-project labels. Never put user IDs, IP addresses, raw URLs,
+query strings, email addresses, or secrets in metric labels.
+
+For OTLP metrics, add the service to the external `metrics_internal` network and
+send to `http://otel-collector:4318`. Prometheus scraping is the default for
+local Docker services.
+
+## Validate
 
 ```bash
-sudo apt install autossh
-sudo install -d -m 700 /etc/observability
-sudo cp tunnel/tunnel.env.example /etc/observability/tunnel.env
-sudoedit /etc/observability/tunnel.env
-sudo cp tunnel/observability-reverse-tunnel.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now observability-reverse-tunnel
+docker compose ps
+curl -fsS http://127.0.0.1:8428/health
+curl -fsS 'http://127.0.0.1:8428/api/v1/query?query=up'
 ```
 
-On the VPS, `ss -ltn | grep 18428` should show only a loopback listener.
-
-## VPS agent
-
-Copy `edge/alloy/` to `prsmusa.com`, create `.env` containing:
-
-```text
-METRICS_REMOTE_WRITE_URL=http://127.0.0.1:18428/api/v1/write
-```
-
-Then run `docker compose up -d`. In Grafana Explore, query `up` or
-`node_uname_info` after about one minute.
+Grafana provisions **Platform Overview** and **Bible API** dashboards. Alert
+rules can be queried with `ALERTS`; they do not send external notifications yet.

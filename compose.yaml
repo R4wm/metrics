@@ -1,26 +1,35 @@
-name: observability
+name: metrics
+
 services:
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.144.0
-    command: ["-storageDataPath=/storage", "-retentionPeriod=90d", "-opentelemetry.usePrometheusNaming"]
-    volumes: ["victoria-metrics-data:/storage"]
-    ports: ["127.0.0.1:8428:8428"]
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=${VICTORIA_METRICS_RETENTION:-90d}
+      - -opentelemetry.usePrometheusNaming
+    volumes:
+      - victoria-metrics-data:/storage
+    ports:
+      - "127.0.0.1:${VICTORIA_METRICS_PORT:-8428}:8428"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8428/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+    networks: [metrics_internal]
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.129.0
     command: ["--config=/etc/otelcol/config.yaml"]
-    volumes: ["./central/otel/config.yaml:/etc/otelcol/config.yaml:ro"]
-    ports:
-      - "${OTLP_BIND_ADDRESS:-0.0.0.0}:4317:4317"
-      - "${OTLP_BIND_ADDRESS:-0.0.0.0}:4318:4318"
+    volumes:
+      - ./central/otel/config.yaml:/etc/otelcol/config.yaml:ro
     depends_on:
-      victoriametrics: {condition: service_healthy}
+      victoriametrics:
+        condition: service_healthy
     restart: unless-stopped
+    networks: [metrics_internal]
+
   grafana:
     image: grafana/grafana:13.1.0
     environment:
@@ -30,10 +39,82 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./central/grafana/provisioning:/etc/grafana/provisioning:ro
-    ports: ["${GRAFANA_BIND_ADDRESS:-127.0.0.1}:3000:3000"]
+      - ./central/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
     depends_on:
-      victoriametrics: {condition: service_healthy}
+      victoriametrics:
+        condition: service_healthy
     restart: unless-stopped
+    networks: [metrics_internal]
+
+  vmalert:
+    image: victoriametrics/vmalert:v1.144.0
+    command:
+      - -datasource.url=http://victoriametrics:8428
+      - -remoteWrite.url=http://victoriametrics:8428
+      - -notifier.url=http://alertmanager:9093
+      - -rule=/etc/vmalert/*.yaml
+    volumes:
+      - ./central/vmalert:/etc/vmalert:ro
+    depends_on:
+      victoriametrics:
+        condition: service_healthy
+      alertmanager:
+        condition: service_started
+    restart: unless-stopped
+    networks: [metrics_internal]
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
+    volumes:
+      - ./central/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    restart: unless-stopped
+    networks: [metrics_internal]
+
+  # Host networking lets Alloy reach Docker bridge targets discovered from the
+  # read-only Docker socket without joining every Compose project network.
+  alloy:
+    image: grafana/alloy:v1.18.0
+    command: ["run", "/etc/alloy/config.alloy", "--server.http.listen-addr=127.0.0.1:12345"]
+    network_mode: host
+    volumes:
+      - ./central/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      victoriametrics:
+        condition: service_healthy
+      node-exporter:
+        condition: service_started
+      cadvisor:
+        condition: service_started
+    restart: unless-stopped
+
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    command: ["--path.rootfs=/host"]
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.51.0
+    network_mode: host
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    restart: unless-stopped
+
 volumes:
   victoria-metrics-data:
   grafana-data:
+
+networks:
+  metrics_internal:
+    name: metrics_internal

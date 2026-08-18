@@ -1,11 +1,11 @@
 [Unit]
-Description=Reverse SSH tunnel for laptop observability services
+Description=Reverse SSH tunnel for Grafana observability UI
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 EnvironmentFile=/etc/observability/tunnel.env
-ExecStart=/usr/bin/autossh -M 0 -N -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -R 127.0.0.1:${VPS_METRICS_PORT}:127.0.0.1:8428 -R 127.0.0.1:${VPS_OTLP_HTTP_PORT}:127.0.0.1:4318 ${VPS_USER}@${VPS_HOST}
+ExecStart=/usr/bin/autossh -M 0 -N -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -R 127.0.0.1:${VPS_GRAFANA_PORT}:127.0.0.1:${LOCAL_GRAFANA_PORT} ${VPS_USER}@${VPS_HOST}
 Restart=always
 RestartSec=10
 

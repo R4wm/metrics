@@ -1,0 +1,79 @@
+discovery.docker "containers" {
+	host             = "unix:///var/run/docker.sock"
+	refresh_interval = "30s"
+}
+
+discovery.relabel "metrics_containers" {
+	targets = discovery.docker.containers.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_label_metrics_scrape"]
+		regex         = "true"
+		action        = "keep"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_network_ip_address", "__meta_docker_container_label_metrics_port"]
+		separator     = ":"
+		regex         = "(.+)"
+		target_label  = "__address__"
+		replacement   = "$1"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_metrics_path"]
+		regex         = "(.+)"
+		target_label  = "__metrics_path__"
+		replacement   = "$1"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_metrics_job"]
+		regex         = "(.+)"
+		target_label  = "job"
+		replacement   = "$1"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_metrics_service"]
+		regex         = "(.+)"
+		target_label  = "service"
+		replacement   = "$1"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+		regex         = "(.+)"
+		target_label  = "compose_project"
+		replacement   = "$1"
+	}
+
+	rule {
+		target_label = "host"
+		replacement  = "10.0.0.68"
+	}
+}
+
+prometheus.remote_write "victoriametrics" {
+	endpoint {
+		url = "http://127.0.0.1:8428/api/v1/write"
+	}
+}
+
+prometheus.scrape "node" {
+	targets         = [{"__address__" = "127.0.0.1:9100", "job" = "node", "host" = "10.0.0.68"}]
+	scrape_interval = "15s"
+	forward_to      = [prometheus.remote_write.victoriametrics.receiver]
+}
+
+prometheus.scrape "cadvisor" {
+	targets         = [{"__address__" = "127.0.0.1:8080", "job" = "cadvisor", "host" = "10.0.0.68"}]
+	scrape_interval = "15s"
+	forward_to      = [prometheus.remote_write.victoriametrics.receiver]
+}
+
+prometheus.scrape "containers" {
+	targets         = discovery.relabel.metrics_containers.output
+	scrape_interval = "15s"
+	forward_to      = [prometheus.remote_write.victoriametrics.receiver]
+}

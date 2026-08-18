@@ -1,0 +1,17 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"id": 1, "title": "Availability", "type": "stat", "targets": [{"expr": "up{job=\"bible_api\"}", "refId": "A"}], "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}},
+    {"id": 2, "title": "Request rate", "type": "timeseries", "targets": [{"expr": "sum(rate(bible_api_http_requests_total[5m]))", "refId": "A"}], "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}},
+    {"id": 3, "title": "5xx rate", "type": "timeseries", "targets": [{"expr": "sum(rate(bible_api_http_requests_total{status_class=\"5xx\"}[5m]))", "refId": "A"}], "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}},
+    {"id": 4, "title": "p95 latency", "type": "timeseries", "targets": [{"expr": "histogram_quantile(0.95, sum by(le) (rate(bible_api_http_request_duration_seconds_bucket[5m])))", "refId": "A"}], "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}},
+    {"id": 5, "title": "In-flight requests", "type": "timeseries", "targets": [{"expr": "bible_api_http_in_flight_requests", "refId": "A"}], "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}},
+    {"id": 6, "title": "Requests by route", "type": "timeseries", "targets": [{"expr": "sum by(route, status_class) (rate(bible_api_http_requests_total[5m]))", "refId": "A"}], "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}}
+  ],
+  "schemaVersion": 41,
+  "tags": ["bible-api"],
+  "title": "Bible API",
+  "uid": "bible-api",
+  "version": 1
+}
