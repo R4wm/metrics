@@ -39,6 +39,21 @@ forward only Grafana's loopback port. The reusable systemd template is in
 `tunnel/observability-reverse-tunnel.service`; set its destination and remote
 port in `/etc/observability/tunnel.env`.
 
+### prsmusa.com dashboard route
+
+The deployed dashboard URL is `https://prsmusa.com/metrics/`. Grafana is
+configured with that URL as its root and serves the `/metrics/` subpath
+directly. The internal host forwards only `127.0.0.1:3000` to VPS loopback
+`127.0.0.1:13000`; VictoriaMetrics remains private.
+
+- Internal tunnel loop: `tunnel/prsmusa-metrics-tunnel`
+- Nginx locations: `tunnel/nginx-prsmusa-metrics.conf`
+- Tunnel startup follows the existing host convention:
+  `@reboot /usr/bin/flock -n /home/baser4wm/.cache/prsmusa-metrics-tunnel.lock /home/baser4wm/bin/prsmusa-metrics-tunnel`
+
+Use a dedicated SSH key constrained on the VPS to
+`permitlisten="127.0.0.1:13000"`. Validate Nginx with `nginx -t` before reload.
+
 ## Add a Docker service
 
 Expose a Prometheus endpoint and opt the service into scraping:

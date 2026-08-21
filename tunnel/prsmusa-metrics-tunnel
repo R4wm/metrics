@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -u
+
+while true; do
+  /usr/bin/ssh -N -T \
+    -i /home/baser4wm/.ssh/prsmusa_metrics_tunnel \
+    -o IdentitiesOnly=yes \
+    -o StrictHostKeyChecking=yes \
+    -o ExitOnForwardFailure=yes \
+    -o ServerAliveInterval=30 \
+    -o ServerAliveCountMax=3 \
+    -o TCPKeepAlive=yes \
+    -R 127.0.0.1:13000:127.0.0.1:3000 \
+    r4wm@172.236.115.113
+  sleep 5
+done
