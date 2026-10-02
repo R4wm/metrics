@@ -115,3 +115,36 @@ tests:
   - eval_time: 3m
     alertname: KaneoBackupMaintenanceFailed
     exp_alerts: []
+- name: expected backup downtime does not page
+  interval: 1m
+  input_series:
+  - series: kaneo_application_up{host="10.0.0.68"}
+    values: 0+0x6
+  alert_rule_test:
+  - eval_time: 6m
+    alertname: KaneoUnavailable
+    exp_alerts: []
+- name: sustained application outage
+  interval: 1m
+  input_series:
+  - series: kaneo_application_up{host="10.0.0.68"}
+    values: 0+0x15
+  alert_rule_test:
+  - eval_time: 11m
+    alertname: KaneoUnavailable
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        service: kaneo
+        host: 10.0.0.68
+      exp_annotations:
+        summary: Kaneo is unavailable beyond its expected backup window
+- name: healthy application
+  interval: 1m
+  input_series:
+  - series: kaneo_application_up{host="10.0.0.68"}
+    values: 1+0x15
+  alert_rule_test:
+  - eval_time: 11m
+    alertname: KaneoUnavailable
+    exp_alerts: []
