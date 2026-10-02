@@ -14,10 +14,16 @@ with tempfile.TemporaryDirectory(prefix="osticket-metrics-") as private:
     metric = metrics / "backup.prom"
     metric.write_text("osticket_backup_last_attempt_success 1\n")
     metric.chmod(0o644)
+    kaneo = Path(private) / "kaneo"
+    kaneo.mkdir(mode=0o755)
+    (kaneo / "health.prom").write_text("kaneo_application_up 1\n")
+    (kaneo / "health.prom").chmod(0o644)
     container = subprocess.check_output([
         "docker", "run", "--rm", "-d", "--user", "65534:65534",
         "-p", "127.0.0.1::9100", "-v", f"{metrics}:/textfile:ro",
+        "-v", f"{kaneo}:/kaneo-textfile:ro",
         "prom/node-exporter:v1.9.1", "--collector.textfile.directory=/textfile",
+        "--collector.textfile.directory=/kaneo-textfile",
     ], text=True).strip()
     try:
         address = subprocess.check_output(
@@ -33,6 +39,7 @@ with tempfile.TemporaryDirectory(prefix="osticket-metrics-") as private:
                     raise
                 time.sleep(0.2)
         assert "osticket_backup_last_attempt_success 1\n" in body
+        assert "kaneo_application_up 1\n" in body
         assert "node_textfile_scrape_error 0\n" in body
         print("Private-parent textfile scrape passed")
     finally:

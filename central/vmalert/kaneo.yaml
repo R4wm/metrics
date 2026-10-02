@@ -1,0 +1,40 @@
+groups:
+- name: kaneo
+  interval: 30s
+  rules:
+  - alert: KaneoUnavailable
+    expr: kaneo_application_up{host="10.0.0.68"} == 0 or absent(kaneo_application_up{host="10.0.0.68"})
+    for: 10m
+    labels:
+      severity: critical
+      service: kaneo
+      host: 10.0.0.68
+    annotations:
+      summary: Kaneo is unavailable beyond its expected backup window
+  - alert: KaneoBackupFailed
+    expr: kaneo_backup_last_attempt_success{host="10.0.0.68"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      service: kaneo
+      host: 10.0.0.68
+    annotations:
+      summary: Latest Kaneo backup failed
+  - alert: KaneoBackupStale
+    expr: (time() - kaneo_backup_last_success_timestamp_seconds{host="10.0.0.68"} > 93600) or absent(kaneo_backup_last_success_timestamp_seconds{host="10.0.0.68"})
+    for: 2m
+    labels:
+      severity: critical
+      service: kaneo
+      host: 10.0.0.68
+    annotations:
+      summary: Kaneo has no successful backup within 26 hours
+  - alert: KaneoBackupMaintenanceFailed
+    expr: kaneo_backup_maintenance_success{host="10.0.0.68"} == 0
+    for: 2m
+    labels:
+      severity: warning
+      service: kaneo
+      host: 10.0.0.68
+    annotations:
+      summary: Kaneo repository integrity or retention check failed

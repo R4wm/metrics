@@ -96,7 +96,7 @@ services:
 
   node-exporter:
     image: prom/node-exporter:v1.9.1
-    command: ["--path.rootfs=/host", "--collector.textfile.directory=/textfile"]
+    command: ["--path.rootfs=/host", "--collector.textfile.directory=/textfile", "--collector.textfile.directory=/kaneo-textfile"]
     network_mode: host
     pid: host
     volumes:
@@ -105,6 +105,12 @@ services:
       - type: bind
         source: ${OSTICKET_METRICS_DIR:-/home/baser4wm/osticket/metrics}
         target: /textfile
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${KANEO_METRICS_DIR:-/home/baser4wm/kaneo/metrics}
+        target: /kaneo-textfile
         read_only: true
         bind:
           create_host_path: false
