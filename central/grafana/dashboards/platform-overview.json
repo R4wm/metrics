@@ -6,11 +6,15 @@
     {"id": 2, "title": "Host CPU usage", "type": "timeseries", "targets": [{"expr": "100 - (avg by(host) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A"}], "gridPos": {"h": 8, "w": 9, "x": 6, "y": 0}},
     {"id": 3, "title": "Lowest free disk (%)", "type": "timeseries", "targets": [{"expr": "100 * min by(host) (node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"})", "refId": "A"}], "gridPos": {"h": 8, "w": 9, "x": 15, "y": 0}},
     {"id": 4, "title": "Container memory", "type": "timeseries", "targets": [{"expr": "sum by(name) (container_memory_working_set_bytes{container!=\"\"})", "refId": "A"}], "gridPos": {"h": 9, "w": 12, "x": 0, "y": 8}},
-    {"id": 5, "title": "Container CPU", "type": "timeseries", "targets": [{"expr": "sum by(name) (rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]))", "refId": "A"}], "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8}}
+    {"id": 5, "title": "Container CPU", "type": "timeseries", "targets": [{"expr": "sum by(name) (rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]))", "refId": "A"}], "gridPos": {"h": 9, "w": 12, "x": 12, "y": 8}},
+    {"id": 6, "title": "osTicket latest backup result", "type": "stat", "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"expr": "osticket_backup_last_attempt_success{host=\"10.0.0.68\"}", "refId": "A", "instant": true}], "gridPos": {"h": 7, "w": 6, "x": 0, "y": 17}, "fieldConfig": {"defaults": {"unit": "short", "noValue": "Unavailable", "mappings": [{"type": "value", "options": {"0": {"text": "Failed", "color": "red"}, "1": {"text": "Successful", "color": "green"}}}]}, "overrides": []}},
+    {"id": 7, "title": "osTicket backup age", "type": "stat", "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"expr": "time() - osticket_backup_last_success_timestamp_seconds{host=\"10.0.0.68\"}", "refId": "A", "instant": true}], "gridPos": {"h": 7, "w": 6, "x": 6, "y": 17}, "fieldConfig": {"defaults": {"unit": "s", "noValue": "Unavailable", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 93600}]}}, "overrides": []}},
+    {"id": 8, "title": "osTicket repository available space", "type": "stat", "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"expr": "osticket_backup_repository_free_bytes{host=\"10.0.0.68\"} >= 0", "refId": "A", "instant": true}], "gridPos": {"h": 7, "w": 6, "x": 12, "y": 17}, "fieldConfig": {"defaults": {"unit": "bytes", "noValue": "Unavailable"}, "overrides": []}},
+    {"id": 9, "title": "osTicket backup alerts", "type": "stat", "datasource": {"type": "prometheus", "uid": "victoriametrics"}, "targets": [{"expr": "count(ALERTS{service=\"osticket\",alertstate=\"firing\"}) or vector(0)", "refId": "A", "instant": true}], "gridPos": {"h": 7, "w": 6, "x": 18, "y": 17}, "fieldConfig": {"defaults": {"unit": "short", "noValue": "Unavailable"}, "overrides": []}}
   ],
   "schemaVersion": 41,
   "tags": ["platform"],
   "title": "Platform Overview",
   "uid": "platform-overview",
-  "version": 1
+  "version": 2
 }

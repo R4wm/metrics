@@ -96,11 +96,18 @@ services:
 
   node-exporter:
     image: prom/node-exporter:v1.9.1
-    command: ["--path.rootfs=/host"]
+    command: ["--path.rootfs=/host", "--collector.textfile.directory=/textfile"]
     network_mode: host
     pid: host
     volumes:
       - /:/host:ro,rslave
+      # Direct bind lets the unprivileged exporter read metrics inside the private data directory.
+      - type: bind
+        source: ${OSTICKET_METRICS_DIR:-/home/baser4wm/osticket/metrics}
+        target: /textfile
+        read_only: true
+        bind:
+          create_host_path: false
     restart: unless-stopped
 
   cadvisor:

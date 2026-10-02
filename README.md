@@ -85,5 +85,27 @@ curl -fsS http://127.0.0.1:8428/health
 curl -fsS 'http://127.0.0.1:8428/api/v1/query?query=up'
 ```
 
-Grafana provisions **Platform Overview** and **Bible API** dashboards. Alert
-rules can be queried with `ALERTS`; they do not send external notifications yet.
+Grafana provisions **Platform Overview** and **Bible API** dashboards. Platform
+Overview includes osTicket's latest backup result, backup age, repository space,
+and firing backup alerts. osTicket failures, missing or older-than-26-hour
+backups, and failed integrity checks appear in `ALERTS`. Backup service logs
+retain operational failures.
+Alertmanager's `discard` receiver remains enabled; no external notifications
+are sent.
+
+The osTicket backup service writes `/home/baser4wm/osticket/metrics/backup.prom`
+atomically. Set `BACKUP_METRICS_FILE` to that path in osTicket's environment.
+Create the metrics directory with mode `0755` and metrics files with `0644`;
+the containing osTicket data directory stays private (`0700`). Node-exporter
+mounts only the metrics directory directly, so it can read the metrics without
+access to credentials or archives. `OSTICKET_METRICS_DIR` may override the host
+path in this stack's environment. The bind requires the directory to exist
+before starting node-exporter.
+
+Validate backup alert failure, success, missing metrics, and the 26-hour
+boundary without sending notifications:
+
+```bash
+docker run --rm --entrypoint /bin/promtool -v "$PWD:/work:ro" -w /work \
+  prom/prometheus:v3.7.3 test rules tests/osticket-rules.yaml
+```

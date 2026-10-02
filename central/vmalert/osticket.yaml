@@ -1,0 +1,32 @@
+groups:
+- name: osticket-backups
+  interval: 30s
+  rules:
+  - alert: OsTicketBackupFailed
+    expr: osticket_backup_last_attempt_success{host="10.0.0.68"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      service: osticket
+      host: 10.0.0.68
+    annotations:
+      summary: Latest osTicket backup failed
+  - alert: OsTicketBackupStale
+    expr: (time() - osticket_backup_last_success_timestamp_seconds{host="10.0.0.68"}
+      > 93600) or absent(osticket_backup_last_success_timestamp_seconds{host="10.0.0.68"})
+    for: 2m
+    labels:
+      severity: critical
+      service: osticket
+      host: 10.0.0.68
+    annotations:
+      summary: osTicket has no successful backup within 26 hours
+  - alert: OsTicketBackupMaintenanceFailed
+    expr: osticket_backup_maintenance_success{host="10.0.0.68"} == 0
+    for: 2m
+    labels:
+      severity: warning
+      service: osticket
+      host: 10.0.0.68
+    annotations:
+      summary: osTicket repository integrity or retention check failed

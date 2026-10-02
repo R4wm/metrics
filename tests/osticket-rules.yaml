@@ -1,0 +1,117 @@
+rule_files:
+- ../central/vmalert/osticket.yaml
+evaluation_interval: 30s
+tests:
+- name: successful backup
+  interval: 1m
+  input_series:
+  - series: osticket_backup_last_attempt_success{host="10.0.0.68"}
+    values: 1+0x10
+  - series: osticket_backup_last_success_timestamp_seconds{host="10.0.0.68"}
+    values: 0+0x10
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: OsTicketBackupFailed
+    exp_alerts: []
+- name: failed backup
+  interval: 1m
+  input_series:
+  - series: osticket_backup_last_attempt_success{host="10.0.0.68"}
+    values: 0+0x10
+  - series: osticket_backup_last_success_timestamp_seconds{host="10.0.0.68"}
+    values: 0+0x10
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: OsTicketBackupFailed
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        service: osticket
+        host: 10.0.0.68
+      exp_annotations:
+        summary: Latest osTicket backup failed
+- name: fresh backup
+  interval: 1m
+  input_series:
+  - series: osticket_backup_last_success_timestamp_seconds{host="10.0.0.68"}
+    values: 0+0x10
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: OsTicketBackupStale
+    exp_alerts: []
+- name: stale backup
+  interval: 1m
+  input_series:
+  - series: osticket_backup_last_success_timestamp_seconds{host="10.0.0.68"}
+    values: -100000+0x10
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: OsTicketBackupStale
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        service: osticket
+        host: 10.0.0.68
+      exp_annotations:
+        summary: osTicket has no successful backup within 26 hours
+- name: missing backup
+  interval: 1m
+  input_series: []
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: OsTicketBackupStale
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        service: osticket
+        host: 10.0.0.68
+      exp_annotations:
+        summary: osTicket has no successful backup within 26 hours
+- name: 26 hour boundary
+  interval: 1m
+  input_series:
+  - series: osticket_backup_last_success_timestamp_seconds{host="10.0.0.68"}
+    values: 0+0x1560
+  alert_rule_test:
+  - eval_time: 26h
+    alertname: OsTicketBackupStale
+    exp_alerts: []
+- name: past 26 hour boundary
+  interval: 1m
+  input_series:
+  - series: osticket_backup_last_success_timestamp_seconds{host="10.0.0.68"}
+    values: 0+0x1564
+  alert_rule_test:
+  - eval_time: 26h3m
+    alertname: OsTicketBackupStale
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        service: osticket
+        host: 10.0.0.68
+      exp_annotations:
+        summary: osTicket has no successful backup within 26 hours
+- name: maintenance result 0
+  interval: 1m
+  input_series:
+  - series: osticket_backup_maintenance_success{host="10.0.0.68"}
+    values: 0+0x10
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: OsTicketBackupMaintenanceFailed
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        service: osticket
+        host: 10.0.0.68
+      exp_annotations:
+        summary: osTicket repository integrity or retention check failed
+- name: maintenance result 1
+  interval: 1m
+  input_series:
+  - series: osticket_backup_maintenance_success{host="10.0.0.68"}
+    values: 1+0x10
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: OsTicketBackupMaintenanceFailed
+    exp_alerts: []
