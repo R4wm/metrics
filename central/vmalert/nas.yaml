@@ -1,0 +1,49 @@
+groups:
+  - name: nas
+    interval: 30s
+    rules:
+      - alert: NasUnreachable
+        expr: prsm_nas_reachable{host="10.0.0.68"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: nas
+          host: 10.0.0.68
+        annotations:
+          summary: NAS 10.0.0.240 is unreachable from baser4wm
+      - alert: NasBackupMountDown
+        expr: prsm_nas_mount_up{host="10.0.0.68"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: nas
+          host: 10.0.0.68
+        annotations:
+          summary: NAS backup mount is not present on baser4wm
+      - alert: NasBackupMountReadOnly
+        expr: prsm_nas_mount_writable{host="10.0.0.68"} == 0 and prsm_nas_mount_up{host="10.0.0.68"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          service: nas
+          host: 10.0.0.68
+        annotations:
+          summary: NAS backup mount is not writable
+      - alert: NasRaidDegraded
+        expr: prsm_nas_raid_status{host="10.0.0.68"} == 2
+        for: 2m
+        labels:
+          severity: critical
+          service: nas
+          host: 10.0.0.68
+        annotations:
+          summary: NAS RAID reports degraded or failed array
+      - alert: NasRaidUnknown
+        expr: prsm_nas_ssh_ok{host="10.0.0.68"} == 0 and prsm_nas_reachable{host="10.0.0.68"} == 1
+        for: 6h
+        labels:
+          severity: warning
+          service: nas
+          host: 10.0.0.68
+        annotations:
+          summary: NAS is up but RAID status is unknown (configure NAS_SSH monitor key)

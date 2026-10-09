@@ -93,6 +93,27 @@ retain operational failures.
 Alertmanager's `discard` receiver remains enabled; no external notifications
 are sent.
 
+### NAS storage (LAN `10.0.0.240`)
+
+`scripts/nas-export-metrics.sh` writes `/home/baser4wm/metrics/nas-textfile/nas.prom`
+for ping, NFS backup mount, and (when `NAS_SSH` is set) RAID status. Install the
+user timer from `systemd/nas-metrics-export.{service,timer}` and share config with
+[PRSM nas-alert](https://github.com/R4wm/prsm/blob/main/docs/ops-nas-storage-alerts.md)
+(`~/.config/prsm/nas-alert.env`).
+
+```bash
+chmod +x ~/github/metrics/scripts/nas-export-metrics.sh
+mkdir -p ~/metrics/nas-textfile
+cp ~/github/metrics/systemd/nas-metrics-export.* ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now nas-metrics-export.timer
+~/github/metrics/scripts/nas-export-metrics.sh
+cd ~/github/metrics && docker compose up -d node-exporter
+```
+
+Grafana **Platform Overview** includes NAS panels; vmalert rules live in
+`central/vmalert/nas.yaml`.
+
 The osTicket backup service writes `/home/baser4wm/osticket/metrics/backup.prom`
 atomically. Set `BACKUP_METRICS_FILE` to that path in osTicket's environment.
 Create the metrics directory with mode `0755` and metrics files with `0644`;

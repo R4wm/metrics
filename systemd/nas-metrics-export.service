@@ -1,0 +1,10 @@
+[Unit]
+Description=Export NAS health metrics for node-exporter textfile collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PRSM_NAS_ALERT_CONFIG=%h/.config/prsm/nas-alert.env
+Environment=NAS_METRICS_DIR=%h/metrics/nas-textfile
+ExecStart=%h/github/metrics/scripts/nas-export-metrics.sh

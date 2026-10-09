@@ -96,7 +96,7 @@ services:
 
   node-exporter:
     image: prom/node-exporter:v1.9.1
-    command: ["--path.rootfs=/host", "--collector.textfile.directory=/textfile", "--collector.textfile.directory=/kaneo-textfile"]
+    command: ["--path.rootfs=/host", "--collector.textfile.directory=/textfile", "--collector.textfile.directory=/kaneo-textfile", "--collector.textfile.directory=/nas-textfile"]
     network_mode: host
     pid: host
     volumes:
@@ -114,6 +114,12 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      - type: bind
+        source: ${NAS_METRICS_DIR:-/home/baser4wm/metrics/nas-textfile}
+        target: /nas-textfile
+        read_only: true
+        bind:
+          create_host_path: true
     restart: unless-stopped
 
   cadvisor:
