@@ -32,7 +32,7 @@ FAKES = {
           hang) sleep 60;;
         esac"""),
     "ssh": textwrap.dedent("""\
-        cat >/dev/null
+        if [ -n "$FAKE_SSH_STDIN" ]; then cat >"$FAKE_SSH_STDIN"; else cat >/dev/null; fi
         case "${FAKE_SSH:-ok}" in
           ok) cat "$FAKE_SSH_OUT";;
           fail) exit 255;;
@@ -239,6 +239,19 @@ def backup_happy_path_sums_paths():
     assert b["prsm_nas_backup_usage_bytes_valid"] == 1 and b["prsm_nas_backup_usage_bytes"] == 12288
     assert abs(b["prsm_nas_backup_usage_timestamp_seconds"] - time.time()) < 60
     assert e.leftovers() == []
+
+
+@test
+def backup_du_runs_via_sudo_user_when_configured():
+    e = Env()
+    e.ssh_out.write_text("4096\t/a\n8192\t/b\n@@RC 0\n")
+    sent = Path(e.tmp.name) / "remote_script"
+    e.run(BACKUP, FAKE_SSH_STDIN=sent)
+    assert "sudo" not in sent.read_text(), "no sudo unless configured"
+    e.base["NAS_DU_SUDO_USER"] = "osticket-backup"
+    e.run(BACKUP, FAKE_SSH_STDIN=sent)
+    assert "timeout 540 sudo -n -u osticket-backup du -s -B1 --" in sent.read_text()
+    assert e.backup["prsm_nas_backup_usage_bytes_valid"] == 1
 
 
 @test

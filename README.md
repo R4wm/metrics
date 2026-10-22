@@ -136,7 +136,29 @@ atomically (temp name `.<file>.tmp.<pid>`, which the collector ignores).
 `NAS_HOST`, `NAS_SSH` (e.g. `r4wm@10.0.0.240`; unset disables SSH checks),
 `NAS_SSH_IDENTITY` (default `~/.ssh/prsm_nas_monitor`), `LOCAL_MOUNT`,
 `NAS_STORAGE_PATH` (default `/mnt/storage`), `BACKUP_USAGE_PATHS`
-(whitespace-separated NAS paths), `NAS_METRICS_DIR`.
+(whitespace-separated NAS paths), `NAS_DU_SUDO_USER` (optional; run `du` as this
+user via `sudo -n -u`), `NAS_METRICS_DIR`.
+
+**NAS account (least privilege).** The monitor key logs in as a dedicated
+`prsm-monitor` user on the NAS: no sudo, password locked, key marked `restrict`
+(no forwarding or terminal). The backup tree is private to `osticket-backup`
+(mode 700), so a single sudoers rule lets the monitor run **only** that exact
+`du`, which reports sizes without granting access to backup contents:
+
+```bash
+# On the NAS
+sudo useradd --system --create-home --shell /bin/sh prsm-monitor && sudo passwd -l prsm-monitor
+sudo install -d -m 700 -o prsm-monitor -g prsm-monitor /home/prsm-monitor/.ssh
+echo "restrict $(cat prsm_nas_monitor.pub)" | sudo tee /home/prsm-monitor/.ssh/authorized_keys
+sudo chown prsm-monitor: /home/prsm-monitor/.ssh/authorized_keys && sudo chmod 600 /home/prsm-monitor/.ssh/authorized_keys
+echo 'prsm-monitor ALL=(osticket-backup) NOPASSWD: /usr/bin/du -s -B1 -- /mnt/storage/production-backups/baser4wm' \
+  | sudo tee /etc/sudoers.d/prsm-monitor && sudo chmod 440 /etc/sudoers.d/prsm-monitor && sudo visudo -c
+```
+
+Matching `nas-alert.env` on baser4wm: `NAS_SSH=prsm-monitor@10.0.0.240`,
+`BACKUP_USAGE_PATHS=/mnt/storage/production-backups/baser4wm`,
+`NAS_DU_SUDO_USER=osticket-backup`. The sudoers rule must match the exact
+`du` arguments, so update both when `BACKUP_USAGE_PATHS` changes.
 
 **Install / update on baser4wm**
 

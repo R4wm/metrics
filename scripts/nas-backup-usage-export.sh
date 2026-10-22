@@ -21,6 +21,10 @@ BACKUP_USAGE_PATHS="${BACKUP_USAGE_PATHS:-/mnt/storage/production-backups/baser4
 METRICS_DIR="${NAS_METRICS_DIR:-$HOME/metrics/nas-textfile}"
 METRICS_FILE="${NAS_BACKUP_METRICS_FILE:-$METRICS_DIR/nas-backup-usage.prom}"
 DU_TIMEOUT="${NAS_DU_TIMEOUT:-540}"
+# Optional: run du on the NAS as this user via `sudo -n -u`, for backup trees the
+# SSH user cannot read. Pair with a sudoers rule for that exact du command line,
+# e.g. prsm-monitor ALL=(osticket-backup) NOPASSWD: /usr/bin/du -s -B1 -- <path>
+DU_SUDO_USER="${NAS_DU_SUDO_USER:-}"
 SSH_TIMEOUT="${NAS_DU_SSH_TIMEOUT:-600}"
 
 read -r -a paths <<<"$BACKUP_USAGE_PATHS"
@@ -28,10 +32,14 @@ valid=0
 usage_bytes=0
 
 if [[ -n "$NAS_SSH" ]] && ((${#paths[@]})); then
+  du_cmd="du"
+  if [[ -n $DU_SUDO_USER ]]; then
+    printf -v du_cmd 'sudo -n -u %q du' "$DU_SUDO_USER"
+  fi
   # shellcheck disable=SC2016  # expands on the NAS, not here
   remote_script='
 for p in "$@"; do [ -d "$p" ] || { echo "@@MISSING"; exit 3; }; done
-timeout '"$DU_TIMEOUT"' du -s -B1 -- "$@"
+timeout '"$DU_TIMEOUT"' '"$du_cmd"' -s -B1 -- "$@"
 echo "@@RC $?"'
   quoted=()
   for p in "${paths[@]}"; do
