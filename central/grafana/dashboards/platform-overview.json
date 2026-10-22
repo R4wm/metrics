@@ -57,178 +57,30 @@
     },
     {
       "id": 4,
-      "title": "Container memory",
+      "title": "Host memory used (%)",
       "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 8
+      },
       "targets": [
         {
-          "expr": "sum by(name) (container_memory_working_set_bytes{container!=\"\"})",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+          "legendFormat": "{{host}}",
           "refId": "A"
         }
       ],
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 8
-      }
-    },
-    {
-      "id": 5,
-      "title": "Container CPU",
-      "type": "timeseries",
-      "targets": [
-        {
-          "expr": "sum by(name) (rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]))",
-          "refId": "A"
-        }
-      ],
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      }
-    },
-    {
-      "id": 6,
-      "title": "osTicket latest backup result",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "targets": [
-        {
-          "expr": "osticket_backup_last_attempt_success{host=\"10.0.0.68\"}",
-          "refId": "A",
-          "instant": true
-        }
-      ],
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 0,
-        "y": 17
-      },
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "noValue": "Unavailable",
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "Failed",
-                  "color": "red"
-                },
-                "1": {
-                  "text": "Successful",
-                  "color": "green"
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 7,
-      "title": "osTicket backup age",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "targets": [
-        {
-          "expr": "time() - osticket_backup_last_success_timestamp_seconds{host=\"10.0.0.68\"}",
-          "refId": "A",
-          "instant": true
-        }
-      ],
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 6,
-        "y": 17
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "noValue": "Unavailable",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 93600
-              }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 8,
-      "title": "osTicket repository available space",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "targets": [
-        {
-          "expr": "osticket_backup_repository_free_bytes{host=\"10.0.0.68\"} >= 0",
-          "refId": "A",
-          "instant": true
-        }
-      ],
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 12,
-        "y": 17
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "noValue": "Unavailable"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 9,
-      "title": "osTicket backup alerts",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "victoriametrics"
-      },
-      "targets": [
-        {
-          "expr": "count(ALERTS{service=\"osticket\",alertstate=\"firing\"}) or vector(0)",
-          "refId": "A",
-          "instant": true
-        }
-      ],
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 18,
-        "y": 17
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "Unavailable"
+          "unit": "percent",
+          "min": 0,
+          "max": 100
         },
         "overrides": []
       }
@@ -243,7 +95,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 16,
         "w": 6,
         "h": 5
       },
@@ -283,7 +135,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 24,
+        "y": 16,
         "w": 6,
         "h": 5
       },
@@ -323,7 +175,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 24,
+        "y": 16,
         "w": 6,
         "h": 5
       },
@@ -363,7 +215,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 24,
+        "y": 16,
         "w": 6,
         "h": 5
       },
@@ -394,7 +246,7 @@
       }
     },
     {
-      "id": 13,
+      "id": 14,
       "title": "NAS reachable",
       "type": "stat",
       "datasource": {
@@ -403,7 +255,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 29,
+        "y": 21,
         "w": 6,
         "h": 5
       },
@@ -434,7 +286,7 @@
       }
     },
     {
-      "id": 14,
+      "id": 15,
       "title": "NAS backup mount",
       "type": "stat",
       "datasource": {
@@ -443,7 +295,7 @@
       },
       "gridPos": {
         "x": 6,
-        "y": 29,
+        "y": 21,
         "w": 6,
         "h": 5
       },
@@ -474,7 +326,7 @@
       }
     },
     {
-      "id": 15,
+      "id": 16,
       "title": "NAS RAID status",
       "type": "stat",
       "datasource": {
@@ -483,7 +335,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 29,
+        "y": 21,
         "w": 6,
         "h": 5
       },
@@ -514,8 +366,8 @@
       }
     },
     {
-      "id": 16,
-      "title": "NAS mount free space",
+      "id": 17,
+      "title": "NAS mount free space (client df)",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -523,13 +375,13 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 29,
+        "y": 21,
         "w": 6,
         "h": 5
       },
       "targets": [
         {
-          "expr": "prsm_nas_mount_avail_bytes{host=\"10.0.0.68\"}",
+          "expr": "prsm_nas_mount_avail_bytes{host=\"10.0.0.68\"} and on() (prsm_nas_mount_df_valid{host=\"10.0.0.68\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=\"10.0.0.68\"} < 180)",
           "refId": "A",
           "instant": true
         }
@@ -551,6 +403,76 @@
         "textMode": "auto",
         "colorMode": "value",
         "graphMode": "none"
+      },
+      "description": "df Avail on the NFS backup mount as seen from baser4wm (filesystem blocks, not backup size). No data when df failed or the export is stale - never a fake 0."
+    },
+    {
+      "id": 18,
+      "title": "Backup allocated size (du on NAS)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 12,
+        "h": 8
+      },
+      "description": "Allocated bytes under BACKUP_USAGE_PATHS, measured with du -s -B1 on the NAS over SSH every 15 min (disk usage, not apparent size). Gaps mean the scan failed or is stale (>45 min), not that backups shrank.",
+      "targets": [
+        {
+          "expr": "prsm_nas_backup_usage_bytes{host=\"10.0.0.68\"} and on() (prsm_nas_backup_usage_bytes_valid{host=\"10.0.0.68\"} == 1) and on() (time() - prsm_nas_backup_usage_timestamp_seconds{host=\"10.0.0.68\"} < 2700)",
+          "legendFormat": "backup allocated",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 19,
+      "title": "NAS array used / size (df on NAS)",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 26,
+        "w": 12,
+        "h": 8
+      },
+      "description": "df Used and size of NAS_STORAGE_PATH on the NAS over SSH (whole filesystem, all data - not just backups). Gaps mean SSH/df failed, the path was not mounted on the NAS, or the export is stale (>3 min).",
+      "targets": [
+        {
+          "expr": "prsm_nas_storage_used_bytes{host=\"10.0.0.68\"} and on() (prsm_nas_storage_df_valid{host=\"10.0.0.68\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=\"10.0.0.68\"} < 180)",
+          "legendFormat": "used",
+          "refId": "A"
+        },
+        {
+          "expr": "prsm_nas_storage_size_bytes{host=\"10.0.0.68\"} and on() (prsm_nas_storage_df_valid{host=\"10.0.0.68\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=\"10.0.0.68\"} < 180)",
+          "legendFormat": "size",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
       }
     }
   ],
@@ -560,5 +482,5 @@
   ],
   "title": "Platform Overview",
   "uid": "platform-overview",
-  "version": 3
+  "version": 4
 }

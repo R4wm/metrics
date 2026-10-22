@@ -47,3 +47,21 @@ groups:
           host: 10.0.0.68
         annotations:
           summary: NAS is up but RAID status is unknown (configure NAS_SSH monitor key)
+      - alert: NasMetricsStale
+        expr: time() - prsm_nas_check_timestamp_seconds{host="10.0.0.68"} > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: nas
+          host: 10.0.0.68
+        annotations:
+          summary: NAS health export has not completed in over 5 minutes (timer, script, or textfile stale)
+      - alert: NasBackupUsageStale
+        expr: (time() - prsm_nas_backup_usage_timestamp_seconds{host="10.0.0.68"} > 3600) and on(host) prsm_nas_ssh_ok{host="10.0.0.68"} == 1
+        for: 15m
+        labels:
+          severity: warning
+          service: nas
+          host: 10.0.0.68
+        annotations:
+          summary: NAS backup usage scan has not succeeded in over an hour although SSH works (check du permissions, paths, timer)

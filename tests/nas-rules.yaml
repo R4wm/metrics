@@ -1,0 +1,88 @@
+rule_files:
+- ../central/vmalert/nas.yaml
+evaluation_interval: 30s
+tests:
+- name: fresh fast export does not alert
+  interval: 1m
+  input_series:
+  - series: prsm_nas_check_timestamp_seconds{host="10.0.0.68"}
+    values: 0+60x20
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: NasMetricsStale
+    exp_alerts: []
+- name: stalled fast export alerts
+  interval: 1m
+  input_series:
+  - series: prsm_nas_check_timestamp_seconds{host="10.0.0.68"}
+    values: 0+0x20
+  alert_rule_test:
+  - eval_time: 4m
+    alertname: NasMetricsStale
+    exp_alerts: []
+  - eval_time: 11m
+    alertname: NasMetricsStale
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        service: nas
+        host: 10.0.0.68
+      exp_annotations:
+        summary: NAS health export has not completed in over 5 minutes (timer, script, or textfile stale)
+- name: backup scan failing while ssh works alerts
+  interval: 1m
+  input_series:
+  - series: prsm_nas_backup_usage_timestamp_seconds{host="10.0.0.68"}
+    values: 0+0x100
+  - series: prsm_nas_ssh_ok{host="10.0.0.68"}
+    values: 1+0x100
+  alert_rule_test:
+  - eval_time: 70m
+    alertname: NasBackupUsageStale
+    exp_alerts: []
+  - eval_time: 80m
+    alertname: NasBackupUsageStale
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        service: nas
+        host: 10.0.0.68
+      exp_annotations:
+        summary: NAS backup usage scan has not succeeded in over an hour although SSH works (check du permissions, paths, timer)
+- name: backup scan stale but ssh down does not double-alert
+  interval: 1m
+  input_series:
+  - series: prsm_nas_backup_usage_timestamp_seconds{host="10.0.0.68"}
+    values: 0+0x100
+  - series: prsm_nas_ssh_ok{host="10.0.0.68"}
+    values: 0+0x100
+  alert_rule_test:
+  - eval_time: 90m
+    alertname: NasBackupUsageStale
+    exp_alerts: []
+- name: fresh backup scan does not alert
+  interval: 1m
+  input_series:
+  - series: prsm_nas_backup_usage_timestamp_seconds{host="10.0.0.68"}
+    values: 0+900x6 5400+60x40
+  - series: prsm_nas_ssh_ok{host="10.0.0.68"}
+    values: 1+0x100
+  alert_rule_test:
+  - eval_time: 40m
+    alertname: NasBackupUsageStale
+    exp_alerts: []
+- name: degraded raid alerts
+  interval: 1m
+  input_series:
+  - series: prsm_nas_raid_status{host="10.0.0.68"}
+    values: 2+0x10
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: NasRaidDegraded
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        service: nas
+        host: 10.0.0.68
+      exp_annotations:
+        summary: NAS RAID reports degraded or failed array
