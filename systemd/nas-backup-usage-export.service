@@ -1,0 +1,12 @@
+[Unit]
+Description=Export NAS backup usage (du on the NAS over SSH) for node-exporter textfile collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Remote du is capped at 540s and the SSH call at 600s; this caps the whole run.
+TimeoutStartSec=660
+Environment=PRSM_NAS_ALERT_CONFIG=%h/.config/prsm/nas-alert.env
+Environment=NAS_METRICS_DIR=%h/metrics/nas-textfile
+ExecStart=%h/github/metrics/scripts/nas-backup-usage-export.sh

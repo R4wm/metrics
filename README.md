@@ -86,47 +86,72 @@ curl -fsS 'http://127.0.0.1:8428/api/v1/query?query=up'
 ```
 
 Grafana provisions **Platform Overview** and **Bible API** dashboards. Platform
-Overview includes osTicket's latest backup result, backup age, repository space,
-and firing backup alerts. osTicket failures, missing or older-than-26-hour
-backups, and failed integrity checks appear in `ALERTS`. Backup service logs
-retain operational failures.
-Alertmanager's `discard` receiver remains enabled; no external notifications
-are sent.
+Overview shows host CPU, memory, and disk; Kaneo health and backups; and NAS
+health, backup growth, and array capacity. Alertmanager's `discard` receiver
+remains enabled; no external notifications are sent.
+
+Run the checks (rule tests need Docker):
+
+```bash
+python3 tests/test-nas-export.py
+python3 tests/test-textfile-exporter.py
+docker run --rm --entrypoint /bin/promtool -v "$PWD:/work:ro" -w /work \
+  prom/prometheus:v3.7.3 test rules tests/nas-rules.yaml tests/kaneo-rules.yaml
+```
 
 ### NAS storage (LAN `10.0.0.240`)
 
-`scripts/nas-export-metrics.sh` writes `/home/baser4wm/metrics/nas-textfile/nas.prom`
-for ping, NFS backup mount, and (when `NAS_SSH` is set) RAID status. Install the
-user timer from `systemd/nas-metrics-export.{service,timer}` and share config with
-[PRSM nas-alert](https://github.com/R4wm/prsm/blob/main/docs/ops-nas-storage-alerts.md)
-(`~/.config/prsm/nas-alert.env`).
+Two user timers on baser4wm write textfiles in `~/metrics/nas-textfile/`, scraped
+by node-exporter. Each script is the **sole writer** of its file and replaces it
+atomically (temp name `.<file>.tmp.<pid>`, which the collector ignores).
+
+| File | Script / timer | Cadence | What it measures |
+| --- | --- | --- | --- |
+| `nas.prom` | `scripts/nas-export-metrics.sh` / `nas-metrics-export` | 1 min | Ping, NFS mount up/writable, mount `df` (client view), and over SSH: RAID state and `df` of the NAS array (`NAS_STORAGE_PATH`) |
+| `nas-backup-usage.prom` | `scripts/nas-backup-usage-export.sh` / `nas-backup-usage-export` | 15 min | `du -s -B1` **on the NAS over SSH** for `BACKUP_USAGE_PATHS` |
+
+**Semantics**
+
+- **df vs du:** `prsm_nas_storage_*_bytes` and `prsm_nas_mount_*_bytes` are
+  filesystem blocks from the `df` **Used/Avail** columns (the whole filesystem,
+  not just backups; the NFS mount may report the same pool as the NAS array).
+  `prsm_nas_backup_usage_bytes` is **allocated** disk usage of the backup trees
+  (`du -B1`, not apparent size).
+- **Failures are gaps, never zeros:** a failed measurement sets that family's
+  `*_valid` gauge to 0 and omits its byte lines. Dashboard panels gate on
+  `*_valid == 1` and on freshness of `prsm_nas_check_timestamp_seconds` (< 180 s)
+  or `prsm_nas_backup_usage_timestamp_seconds` (< 2700 s).
+- **Crashes show as staleness:** a killed or timed-out run leaves the previous
+  file unchanged; its timestamp stops advancing. The backup script carries the
+  last *successful* scan time forward on failure. `NasMetricsStale` and
+  `NasBackupUsageStale` alert on age.
+- **Bounded runtime:** every NFS call runs under `timeout` (`NAS_NFS_TIMEOUT`,
+  default 10 s) and SSH under `NAS_SSH_TIMEOUT` (30 s); the remote `du` is capped
+  at 540 s. Units set `TimeoutStartSec` (90 s fast, 660 s backup).
+- **RAID:** from `/proc/mdstat`, plus `mdadm --detail` when the monitor user is
+  permitted. `3` means the SSH check failed.
+
+**Config** (`~/.config/prsm/nas-alert.env`, shared with
+[PRSM nas-alert](https://github.com/R4wm/prsm/blob/main/docs/ops-nas-storage-alerts.md)):
+`NAS_HOST`, `NAS_SSH` (e.g. `r4wm@10.0.0.240`; unset disables SSH checks),
+`NAS_SSH_IDENTITY` (default `~/.ssh/prsm_nas_monitor`), `LOCAL_MOUNT`,
+`NAS_STORAGE_PATH` (default `/mnt/storage`), `BACKUP_USAGE_PATHS`
+(whitespace-separated NAS paths), `NAS_METRICS_DIR`.
+
+**Install / update on baser4wm**
 
 ```bash
-chmod +x ~/github/metrics/scripts/nas-export-metrics.sh
+cd ~/github/metrics && git pull
+chmod +x scripts/nas-export-metrics.sh scripts/nas-backup-usage-export.sh
 mkdir -p ~/metrics/nas-textfile
-cp ~/github/metrics/systemd/nas-metrics-export.* ~/.config/systemd/user/
+cp systemd/nas-metrics-export.* systemd/nas-backup-usage-export.* ~/.config/systemd/user/
 systemctl --user daemon-reload
-systemctl --user enable --now nas-metrics-export.timer
-~/github/metrics/scripts/nas-export-metrics.sh
-cd ~/github/metrics && docker compose up -d node-exporter
+systemctl --user enable --now nas-metrics-export.timer nas-backup-usage-export.timer
+loginctl enable-linger baser4wm   # timers run without a login session
+scripts/nas-export-metrics.sh && scripts/nas-backup-usage-export.sh
+cat ~/metrics/nas-textfile/*.prom
+docker compose up -d node-exporter
+docker compose restart vmalert grafana   # rules and dashboards are not hot-reloaded
 ```
 
-Grafana **Platform Overview** includes NAS panels; vmalert rules live in
-`central/vmalert/nas.yaml`.
-
-The osTicket backup service writes `/home/baser4wm/osticket/metrics/backup.prom`
-atomically. Set `BACKUP_METRICS_FILE` to that path in osTicket's environment.
-Create the metrics directory with mode `0755` and metrics files with `0644`;
-the containing osTicket data directory stays private (`0700`). Node-exporter
-mounts only the metrics directory directly, so it can read the metrics without
-access to credentials or archives. `OSTICKET_METRICS_DIR` may override the host
-path in this stack's environment. The bind requires the directory to exist
-before starting node-exporter.
-
-Validate backup alert failure, success, missing metrics, and the 26-hour
-boundary without sending notifications:
-
-```bash
-docker run --rm --entrypoint /bin/promtool -v "$PWD:/work:ro" -w /work \
-  prom/prometheus:v3.7.3 test rules tests/osticket-rules.yaml
-```
+vmalert rules: `central/vmalert/nas.yaml`.
