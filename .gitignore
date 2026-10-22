@@ -1,3 +1,4 @@
 .env
 data/
 secrets/
+__pycache__/
