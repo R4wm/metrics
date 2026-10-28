@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Forward (pull) tunnel: lets central Alloy on baser4wm scrape the prsmusa.com edge exporters.
+# The VPS key allows only these three loopback ports and no shell:
+#   restrict,port-forwarding,permitopen="127.0.0.1:9113",permitopen="127.0.0.1:3903",permitopen="127.0.0.1:9100",command="/bin/false" ssh-ed25519 ... prsmusa-metrics-scrape
+#
+#   baser4wm 127.0.0.1:19113 -> VPS 127.0.0.1:9113  prometheus-nginx-exporter
+#   baser4wm 127.0.0.1:13903 -> VPS 127.0.0.1:3903  mtail (nginx requests by host/route/status)
+#   baser4wm 127.0.0.1:19100 -> VPS 127.0.0.1:9100  prometheus-node-exporter
+#
+# Started like the other tunnels:
+#   @reboot /usr/bin/flock -n /home/baser4wm/.cache/prsmusa-metrics-scrape-tunnel.lock /home/baser4wm/bin/prsmusa-metrics-scrape-tunnel >> /home/baser4wm/.cache/prsmusa-metrics-scrape-tunnel.log 2>&1
+set -u
+
+while true; do
+  /usr/bin/ssh -N -T \
+    -i /home/baser4wm/.ssh/prsmusa_metrics_scrape \
+    -o IdentitiesOnly=yes \
+    -o StrictHostKeyChecking=yes \
+    -o ExitOnForwardFailure=yes \
+    -o ServerAliveInterval=30 \
+    -o ServerAliveCountMax=3 \
+    -o TCPKeepAlive=yes \
+    -L 127.0.0.1:19113:127.0.0.1:9113 \
+    -L 127.0.0.1:13903:127.0.0.1:3903 \
+    -L 127.0.0.1:19100:127.0.0.1:9100 \
+    r4wm@172.236.115.113
+  sleep 5
+done
