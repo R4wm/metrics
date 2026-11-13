@@ -101,7 +101,7 @@
       },
       "targets": [
         {
-          "expr": "kaneo_application_up{host=\"10.0.0.68\"}",
+          "expr": "kaneo_application_up{host=~\"10.0.0.68|prsm-be\"}",
           "refId": "A",
           "instant": true
         }
@@ -141,7 +141,7 @@
       },
       "targets": [
         {
-          "expr": "kaneo_backup_last_attempt_success{host=\"10.0.0.68\"}",
+          "expr": "kaneo_backup_last_attempt_success{host=~\"10.0.0.68|prsm-be\"}",
           "refId": "A",
           "instant": true
         }
@@ -181,7 +181,7 @@
       },
       "targets": [
         {
-          "expr": "time() - kaneo_backup_last_success_timestamp_seconds{host=\"10.0.0.68\"}",
+          "expr": "time() - kaneo_backup_last_success_timestamp_seconds{host=~\"10.0.0.68|prsm-be\"}",
           "refId": "A",
           "instant": true
         }
@@ -221,7 +221,7 @@
       },
       "targets": [
         {
-          "expr": "kaneo_backup_repository_free_bytes{host=\"10.0.0.68\"} >= 0",
+          "expr": "kaneo_backup_repository_free_bytes{host=~\"10.0.0.68|prsm-be\"} >= 0",
           "refId": "A",
           "instant": true
         }
@@ -261,7 +261,7 @@
       },
       "targets": [
         {
-          "expr": "prsm_nas_reachable{host=\"10.0.0.68\"}",
+          "expr": "prsm_nas_reachable{host=~\"10.0.0.68|prsm-be\"}",
           "refId": "A",
           "instant": true
         }
@@ -301,7 +301,7 @@
       },
       "targets": [
         {
-          "expr": "prsm_nas_mount_up{host=\"10.0.0.68\"}",
+          "expr": "prsm_nas_mount_up{host=~\"10.0.0.68|prsm-be\"}",
           "refId": "A",
           "instant": true
         }
@@ -341,7 +341,7 @@
       },
       "targets": [
         {
-          "expr": "prsm_nas_raid_status{host=\"10.0.0.68\"}",
+          "expr": "prsm_nas_raid_status{host=~\"10.0.0.68|prsm-be\"}",
           "refId": "A",
           "instant": true
         }
@@ -381,7 +381,7 @@
       },
       "targets": [
         {
-          "expr": "prsm_nas_mount_avail_bytes{host=\"10.0.0.68\"} and on() (prsm_nas_mount_df_valid{host=\"10.0.0.68\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=\"10.0.0.68\"} < 180)",
+          "expr": "prsm_nas_mount_avail_bytes{host=~\"10.0.0.68|prsm-be\"} and on() (prsm_nas_mount_df_valid{host=~\"10.0.0.68|prsm-be\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=~\"10.0.0.68|prsm-be\"} < 180)",
           "refId": "A",
           "instant": true
         }
@@ -423,7 +423,7 @@
       "description": "Allocated bytes under BACKUP_USAGE_PATHS, measured with du -s -B1 on the NAS over SSH every 15 min (disk usage, not apparent size). Gaps mean the scan failed or is stale (>45 min), not that backups shrank.",
       "targets": [
         {
-          "expr": "prsm_nas_backup_usage_bytes{host=\"10.0.0.68\"} and on() (prsm_nas_backup_usage_bytes_valid{host=\"10.0.0.68\"} == 1) and on() (time() - prsm_nas_backup_usage_timestamp_seconds{host=\"10.0.0.68\"} < 2700)",
+          "expr": "prsm_nas_backup_usage_bytes{host=~\"10.0.0.68|prsm-be\"} and on() (prsm_nas_backup_usage_bytes_valid{host=~\"10.0.0.68|prsm-be\"} == 1) and on() (time() - prsm_nas_backup_usage_timestamp_seconds{host=~\"10.0.0.68|prsm-be\"} < 2700)",
           "legendFormat": "backup allocated",
           "refId": "A"
         }
@@ -455,12 +455,12 @@
       "description": "df Used and size of NAS_STORAGE_PATH on the NAS over SSH (whole filesystem, all data - not just backups). Gaps mean SSH/df failed, the path was not mounted on the NAS, or the export is stale (>3 min).",
       "targets": [
         {
-          "expr": "prsm_nas_storage_used_bytes{host=\"10.0.0.68\"} and on() (prsm_nas_storage_df_valid{host=\"10.0.0.68\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=\"10.0.0.68\"} < 180)",
+          "expr": "prsm_nas_storage_used_bytes{host=~\"10.0.0.68|prsm-be\"} and on() (prsm_nas_storage_df_valid{host=~\"10.0.0.68|prsm-be\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=~\"10.0.0.68|prsm-be\"} < 180)",
           "legendFormat": "used",
           "refId": "A"
         },
         {
-          "expr": "prsm_nas_storage_size_bytes{host=\"10.0.0.68\"} and on() (prsm_nas_storage_df_valid{host=\"10.0.0.68\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=\"10.0.0.68\"} < 180)",
+          "expr": "prsm_nas_storage_size_bytes{host=~\"10.0.0.68|prsm-be\"} and on() (prsm_nas_storage_df_valid{host=~\"10.0.0.68|prsm-be\"} == 1) and on() (time() - prsm_nas_check_timestamp_seconds{host=~\"10.0.0.68|prsm-be\"} < 180)",
           "legendFormat": "size",
           "refId": "B"
         }
