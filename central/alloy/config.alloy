@@ -50,7 +50,7 @@ discovery.relabel "metrics_containers" {
 
 	rule {
 		target_label = "host"
-		replacement  = "10.0.0.68"
+		replacement  = "prsm-be"
 	}
 }
 
@@ -61,13 +61,13 @@ prometheus.remote_write "victoriametrics" {
 }
 
 prometheus.scrape "node" {
-	targets         = [{"__address__" = "127.0.0.1:9100", "job" = "node", "host" = "10.0.0.68"}]
+	targets         = [{"__address__" = "127.0.0.1:9100", "job" = "node", "host" = "prsm-be"}]
 	scrape_interval = "15s"
 	forward_to      = [prometheus.remote_write.victoriametrics.receiver]
 }
 
 prometheus.scrape "cadvisor" {
-	targets         = [{"__address__" = "127.0.0.1:8080", "job" = "cadvisor", "host" = "10.0.0.68"}]
+	targets         = [{"__address__" = "127.0.0.1:8080", "job" = "cadvisor", "host" = "prsm-be"}]
 	scrape_interval = "15s"
 	forward_to      = [prometheus.remote_write.victoriametrics.receiver]
 }
