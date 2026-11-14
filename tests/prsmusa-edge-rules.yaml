@@ -1,0 +1,77 @@
+rule_files:
+- ../central/vmalert/prsmusa-edge.yaml
+evaluation_interval: 30s
+tests:
+- name: healthy traffic does not alert
+  interval: 1m
+  input_series:
+  - series: nginx_http_requests_total{job="nginx_log",host="prsmusa.com",route="site",method="GET",status="200"}
+    values: 0+600x30
+  - series: nginx_http_requests_total{job="nginx_log",host="prsmusa.com",route="bible",method="GET",status="502"}
+    values: 0+6x30
+  alert_rule_test:
+  - eval_time: 25m
+    alertname: Prsmusa5xxRateHigh
+    exp_alerts: []
+- name: 5xx burst alerts
+  interval: 1m
+  input_series:
+  - series: nginx_http_requests_total{job="nginx_log",host="work.prsmusa.com",route="api",method="GET",status="200"}
+    values: 0+60x30
+  - series: nginx_http_requests_total{job="nginx_log",host="work.prsmusa.com",route="api",method="GET",status="502"}
+    values: 0+30x30
+  alert_rule_test:
+  - eval_time: 25m
+    alertname: Prsmusa5xxRateHigh
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        service: nginx
+        host: work.prsmusa.com
+      exp_annotations:
+        summary: "work.prsmusa.com: more than 5% of requests are 5xx"
+- name: a few errors on a quiet site do not alert
+  interval: 1m
+  input_series:
+  - series: nginx_http_requests_total{job="nginx_log",host="prsmusa.com",route="site",method="GET",status="500"}
+    values: 0+1x30
+  alert_rule_test:
+  - eval_time: 25m
+    alertname: Prsmusa5xxRateHigh
+    exp_alerts: []
+- name: failing tunnel upstream alerts
+  interval: 1m
+  input_series:
+  - series: nginx_upstream_responses_total{job="nginx_log",upstream="kaneo",upstream_status="200"}
+    values: 0+30x30
+  - series: nginx_upstream_responses_total{job="nginx_log",upstream="kaneo",upstream_status="no-response"}
+    values: 0+20x30
+  - series: nginx_upstream_responses_total{job="nginx_log",upstream="bible",upstream_status="200"}
+    values: 0+30x30
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: PrsmusaUpstreamFailing
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        service: nginx
+        host: prsmusa.com
+        upstream: kaneo
+      exp_annotations:
+        summary: "Upstream kaneo (tunnel to baser4wm) fails over 20% of proxied requests"
+- name: nginx down
+  interval: 1m
+  input_series:
+  - series: nginx_up{job="nginx",host="prsmusa.com"}
+    values: 1 1 0 0 0 0 0
+  alert_rule_test:
+  - eval_time: 6m
+    alertname: PrsmusaNginxDown
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        service: nginx
+        host: prsmusa.com
+        job: nginx
+      exp_annotations:
+        summary: nginx on prsmusa.com is not answering stub_status

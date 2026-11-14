@@ -1,0 +1,40 @@
+groups:
+- name: prsmusa-edge
+  interval: 30s
+  rules:
+  # A down scrape tunnel or exporter shows as up == 0 and is covered by MetricsTargetDown.
+  - alert: PrsmusaNginxDown
+    expr: nginx_up{host="prsmusa.com"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      service: nginx
+      host: prsmusa.com
+    annotations:
+      summary: nginx on prsmusa.com is not answering stub_status
+  - alert: Prsmusa5xxRateHigh
+    expr: |
+      (
+        sum by (host) (rate(nginx_http_requests_total{job="nginx_log", status=~"5.."}[5m]))
+        / sum by (host) (rate(nginx_http_requests_total{job="nginx_log"}[5m]))
+      ) > 0.05
+      and sum by (host) (rate(nginx_http_requests_total{job="nginx_log"}[5m])) > 0.05
+    for: 10m
+    labels:
+      severity: warning
+      service: nginx
+    annotations:
+      summary: "{{ $labels.host }}: more than 5% of requests are 5xx"
+  - alert: PrsmusaUpstreamFailing
+    expr: |
+      sum by (upstream) (rate(nginx_upstream_responses_total{job="nginx_log", upstream_status=~"502|503|504|no-response"}[5m]))
+      / sum by (upstream) (rate(nginx_upstream_responses_total{job="nginx_log"}[5m]))
+      > 0.2
+      and sum by (upstream) (rate(nginx_upstream_responses_total{job="nginx_log"}[5m])) > 0.01
+    for: 5m
+    labels:
+      severity: warning
+      service: nginx
+      host: prsmusa.com
+    annotations:
+      summary: "Upstream {{ $labels.upstream }} (tunnel to baser4wm) fails over 20% of proxied requests"

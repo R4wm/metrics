@@ -54,6 +54,29 @@ directly. The internal host forwards only `127.0.0.1:3000` to VPS loopback
 Use a dedicated SSH key constrained on the VPS to
 `permitlisten="127.0.0.1:13000"`. Validate Nginx with `nginx -t` before reload.
 
+### prsmusa.com edge (nginx) metrics
+
+Dashboard **prsmusa.com edge (nginx)** (`central/grafana/dashboards/prsmusa-edge.json`) shows:
+- requests by HTTP status, host and route
+- 4xx and 5xx breakdowns
+- latency p50/p95
+- per-upstream (per-tunnel) responses, failure share and latency
+- nginx connections
+- VPS CPU, memory, disk and network
+
+It's pulled, not pushed. Nothing on the VPS can reach baser4wm:
+
+| VPS (127.0.0.1) | baser4wm (127.0.0.1) | job |
+|---|---|---|
+| `:9113` prometheus-nginx-exporter (stub_status) | `:19113` | `nginx` |
+| `:3903` mtail over `/var/log/nginx/prsm-metrics.log` | `:13903` | `nginx_log` |
+| `:9100` prometheus-node-exporter | `:19100` | `node` (`host="prsmusa.com"`) |
+
+- The VPS side (exporters, log format, mtail program) is installed by `make prsmusa.com`. It's versioned in R4wm/infra-docs `nginx/prsmusa/{conf.d,mtail}` and `scripts/prsmusa-install-metrics.sh`.
+- The labels are bounded by nginx maps: known vhosts, route groups, standard methods, and upstream names generated from `inventory/tunnels.tsv`. No IPs, paths or user agents are recorded.
+- Tunnel: `tunnel/prsmusa-metrics-scrape-tunnel` (ssh `-L`), with the usual `@reboot flock` cron line. Its VPS key is limited to the three ports above and has no shell (see the script header).
+- Alerts (`central/vmalert/prsmusa-edge.yaml`): `PrsmusaNginxDown`, `Prsmusa5xxRateHigh`, `PrsmusaUpstreamFailing`. A down tunnel or exporter is covered by `MetricsTargetDown`.
+
 ## Add a Docker service
 
 Expose a Prometheus endpoint and opt the service into scraping:
@@ -85,7 +108,7 @@ curl -fsS http://127.0.0.1:8428/health
 curl -fsS 'http://127.0.0.1:8428/api/v1/query?query=up'
 ```
 
-Grafana provisions **Platform Overview** and **Bible API** dashboards. Platform
+Grafana provisions **Platform Overview**, **Bible API** and **prsmusa.com edge (nginx)** dashboards. Platform
 Overview shows host CPU, memory, and disk; Kaneo health and backups; and NAS
 health, backup growth, and array capacity. Alertmanager's `discard` receiver
 remains enabled; no external notifications are sent.
@@ -96,7 +119,7 @@ Run the checks (rule tests need Docker):
 python3 tests/test-nas-export.py
 python3 tests/test-textfile-exporter.py
 docker run --rm --entrypoint /bin/promtool -v "$PWD:/work:ro" -w /work \
-  prom/prometheus:v3.7.3 test rules tests/nas-rules.yaml tests/kaneo-rules.yaml
+  prom/prometheus:v3.7.3 test rules tests/nas-rules.yaml tests/kaneo-rules.yaml tests/prsmusa-edge-rules.yaml
 ```
 
 ### NAS storage (LAN `10.0.0.240`)
