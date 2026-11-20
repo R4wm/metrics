@@ -36,8 +36,8 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?set in .env}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set in .env}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_DOMAIN: prsmusa.com
-      GF_SERVER_ROOT_URL: https://prsmusa.com/metrics/
+      GF_SERVER_DOMAIN: metrics.prsmusa.com
+      GF_SERVER_ROOT_URL: https://metrics.prsmusa.com/internal/
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - grafana-data:/var/lib/grafana
