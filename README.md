@@ -39,11 +39,13 @@ forward only Grafana's loopback port. The reusable systemd template is in
 `tunnel/observability-reverse-tunnel.service`; set its destination and remote
 port in `/etc/observability/tunnel.env`.
 
-### prsmusa.com dashboard route
+### Dashboard route (metrics.prsmusa.com/internal/)
 
-The deployed dashboard URL is `https://prsmusa.com/metrics/`. Grafana is
-configured with that URL as its root and serves the `/metrics/` subpath
-directly. The internal host forwards only `127.0.0.1:3000` to VPS loopback
+The deployed dashboard URL is `https://metrics.prsmusa.com/internal/` (moved from
+`https://prsmusa.com/metrics/`, which now redirects there keeping the path). Grafana is configured with that URL as
+its root and serves the `/internal/` subpath directly. The front door is prsm-fe's `metrics.prsmusa.com` vhost
+(infra-docs `deployments/prsm-fe/`); change Grafana's root URL and that vhost together, because Grafana redirects to
+its root URL. `metrics.prsmusa.com/network/` is netwatch's page (R4wm/prsm-netwatch), not Grafana. The internal host forwards only `127.0.0.1:3000` to VPS loopback
 `127.0.0.1:13000`; VictoriaMetrics remains private.
 
 - Internal tunnel loop: `tunnel/prsmusa-metrics-tunnel`
