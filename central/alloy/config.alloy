@@ -66,6 +66,17 @@ prometheus.scrape "node" {
 	forward_to      = [prometheus.remote_write.victoriametrics.receiver]
 }
 
+// prsmusa.com edge (VPS), pulled through tunnel/prsmusa-metrics-scrape-tunnel (ssh -L).
+prometheus.scrape "prsmusa_edge" {
+	targets = [
+		{"__address__" = "127.0.0.1:19113", "job" = "nginx", "host" = "prsmusa.com"},
+		{"__address__" = "127.0.0.1:13903", "job" = "nginx_log", "host" = "prsmusa.com"},
+		{"__address__" = "127.0.0.1:19100", "job" = "node", "host" = "prsmusa.com"},
+	]
+	scrape_interval = "15s"
+	forward_to      = [prometheus.remote_write.victoriametrics.receiver]
+}
+
 prometheus.scrape "cadvisor" {
 	targets         = [{"__address__" = "127.0.0.1:8080", "job" = "cadvisor", "host" = "prsm-be"}]
 	scrape_interval = "15s"
